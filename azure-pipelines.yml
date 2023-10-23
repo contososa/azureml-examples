@@ -5,8 +5,8 @@ trigger:
 
 variables:
   service-connection: 'machine-learning-connection' # replace with your service connection name
-  resource-group: 'machinelearning-rg' # replace with your resource group name
-  workspace: 'docs-ws' # replace with your workspace name
+  resource-group: 'rg-mlopslite-0004-prod' # replace with your resource group name
+  workspace: 'mlw-mlopslite-0004-prod' # replace with your workspace name
 
 jobs:
 - job: SubmitAzureMLJob
@@ -43,3 +43,19 @@ jobs:
 
       # Set output variable for next task
       echo "##vso[task.setvariable variable=JOB_NAME;isOutput=true;]$job_name"
+
+- job: WaitForAzureMLJobCompletion
+  displayName: Wait for AzureML Job Completion
+  pool: server
+  timeoutInMinutes: 0
+  dependsOn: SubmitAzureMLJob
+  variables: 
+    # We are saving the name of azureMl job submitted in previous step to a variable and it will be used as an inut to the AzureML Job Wait task
+    azureml_job_name_from_submit_job: $[ dependencies.SubmitAzureMLJob.outputs['submit_azureml_job_task.AZUREML_JOB_NAME'] ] 
+  steps:
+  - task: AzureMLJobWaitTask@1
+    inputs:
+      serviceConnection: $(service-connection)
+      resourceGroupName: $(resource-group)
+      azureMLWorkspaceName: $(workspace)
+      azureMLJobName: $(azureml_job_name_from_submit_job)
